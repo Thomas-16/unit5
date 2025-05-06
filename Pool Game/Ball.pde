@@ -7,17 +7,21 @@ class Ball {
   PVector pos, velocity;
   color col;
   float r = BALL_R, m = 1;
+  boolean isWhiteBall;
+  boolean isRedBall;
 
-  Ball(PVector p, PVector v, color c) {
+  Ball(PVector p, PVector v, color c, boolean w, boolean r) {
     pos = p.copy();
     velocity = v.copy();
     col = c;
+    isWhiteBall = w;
+    isRedBall = r;
   }
 
   void update() {
     // friction (rolling resistance)
     velocity.mult(FRICTION);
-    if (velocity.magSq() < 0.001) velocity.set(0, 0);
+    if (velocity.magSq() < 0.01) velocity.set(0, 0);
 
     pos.add(velocity);
     collideRails();
