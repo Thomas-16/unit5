@@ -1,4 +1,16 @@
 
+float cueAngle = -PI/2; 
+float cueLength = 180;
+float pull = 0;
+final float MAX_PULL = 60;
+boolean charging = false; 
+boolean shooting = false;
+int shootF = 0;   
+final int SHOOT_FRAMES = 6; 
+float charge = 0;  
+final float MAX_CHARGE = 60;
+float shootStartPull; 
+
 Hole[] holes;
 ArrayList<Ball> balls;
 Ball whiteBall;
@@ -31,7 +43,6 @@ void setup() {
 
   // white ball
   whiteBall = new Ball(new PVector(width/2, height/2 + 250), new PVector(), color(255), true, false);
-  whiteBall.velocity = new PVector(random(-10, 10), -50);
   balls.add(whiteBall);
 
   PVector rackOrigin = new PVector(width/2, height/2 - 100);
@@ -96,9 +107,26 @@ void draw() {
     balls.remove(ballToRemove);
   }
   
-  if(areBallsStill()) {
-    
+  // cue stick logic
+  if (areBallsStill() && charging) {  // keep pulling back
+    if (charge < MAX_CHARGE) {
+      charge++;
+      pull = map(charge, 0, MAX_CHARGE, 0, MAX_PULL);
+    }
   }
+
+  if (shooting) {  // forward shove
+    float t = (float)shootF / SHOOT_FRAMES;
+    pull = lerp(shootStartPull, 0, t);
+    shootF++;
+    if (shootF >= SHOOT_FRAMES) {
+      shooting = false;
+      pull     = 0;
+    }
+  }
+
+  // draw cue when balls are still OR during charge / shove
+  if (areBallsStill() || charging || shooting) drawCue();
   
   // score texts
   textSize(80);
@@ -112,6 +140,18 @@ void draw() {
   
 }
 
+void drawCue() {
+  PVector dir = PVector.fromAngle(cueAngle).normalize();
+  
+  PVector tip  = PVector.add(whiteBall.pos, PVector.mult(dir, -(whiteBall.r + pull)));
+  PVector butt = PVector.add(tip, PVector.mult(dir, -cueLength));
+
+  stroke(181, 130, 70);
+  strokeWeight(8);
+  line(tip.x, tip.y, butt.x, butt.y);
+}
+
+
 boolean areBallsStill() {
   for(Ball ball : balls) {
     if(ball.velocity.magSq() > 0.01) {
@@ -120,6 +160,33 @@ boolean areBallsStill() {
   }
   return true;
 }
+
+void mousePressed() {
+  if (areBallsStill() && !charging && !shooting) {
+    cueAngle = atan2(whiteBall.pos.y - mouseY, whiteBall.pos.x - mouseX);
+  }
+}
+
+void keyPressed() {
+  if (key == ' ' && areBallsStill() && !shooting) {
+    charging = true;
+    charge   = 0;
+    pull     = 0;
+  }
+}
+
+void keyReleased() {
+  if (key == ' ' && charging) {
+    PVector dir = PVector.fromAngle(cueAngle).normalize();
+    whiteBall.velocity = dir.mult(charge * 0.4f);
+
+    charging = false;
+    shooting = true;
+    shootF = 0;
+    shootStartPull = pull;
+  }
+}
+
 
 void drawTable() {
   stroke(#000000);
@@ -133,29 +200,27 @@ void drawTable() {
   rect(width/2, height/2, 500, 700, 30);
 }
 
+
 void collision(Ball a, Ball b) {
   PVector delta = PVector.sub(b.pos, a.pos);
   float dist = delta.mag();
   float minDist = a.r + b.r;
 
-  if (dist < minDist && dist > 0) {
-    // position correction to avoid sinking
-    float overlap = minDist - dist;
-    PVector norm = delta.copy().normalize();
-    a.pos.add(PVector.mult(norm, -overlap/2));
-    b.pos.add(PVector.mult(norm,  overlap/2));
+  if (dist >= minDist || dist == 0) return;
 
-    // relative velocity along the normal
-    PVector relVel = PVector.sub(b.velocity, a.velocity);
-    float velAlongNormal = relVel.dot(norm);
+  // overlap correction
+  float overlap = minDist - dist;
+  PVector n = delta.copy().div(dist);   // collision unit vector
+  a.pos.add(PVector.mult(n, -overlap * 0.5));
+  b.pos.add(PVector.mult(n,  overlap * 0.5));
 
-    if (velAlongNormal > 0) return; // separating
+  PVector relVel = PVector.sub(b.velocity, a.velocity);
+  float vn = relVel.dot(n);          
+  if (vn > 0) return;       
 
-    float e = RESTITUTION;
-    float j = -(1+e) * velAlongNormal / (1/a.m + 1/b.m);
-    PVector impulse = PVector.mult(norm, j);
+  float j = -(1 + 0.96) * vn / (1 / a.m + 1 / b.m);
+  PVector impulse = PVector.mult(n, j);
 
-    a.velocity.sub(PVector.mult(impulse, 1/a.m));
-    b.velocity.add(PVector.mult(impulse, 1/b.m));
-  }
+  a.velocity.sub(PVector.mult(impulse, 1 / a.m));
+  b.velocity.add(PVector.mult(impulse, 1 / b.m));
 }
