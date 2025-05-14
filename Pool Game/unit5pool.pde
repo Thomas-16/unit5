@@ -1,15 +1,14 @@
-
 float cueAngle = -PI/2; 
 float cueLength = 180;
 float pull = 0;
 final float MAX_PULL = 60;
-boolean charging = false; 
+final int SHOOT_FRAMES = 6; 
+final float MAX_CHARGE = 60;
+boolean charging = false;
 boolean shooting = false;
 int shootF = 0;   
-final int SHOOT_FRAMES = 6; 
 float charge = 0;  
-final float MAX_CHARGE = 60;
-float shootStartPull; 
+float shootStartPull;
 
 Hole[] holes;
 ArrayList<Ball> balls;
@@ -22,6 +21,19 @@ PFont scoreFont;
 
 color BLUE_COLOR = color(0,102,255);
 color RED_COLOR = color(255,36,0);
+color redBackground = #ed634e;
+color blueBackground = #b0d7ff;
+
+boolean isRedTurn;
+boolean ballsStillLastFrame = true;
+
+// mode framework
+int mode;
+final int START = 0;
+final int GAME = 1;
+final int GAMEOVER = 2;
+final int PAUSED = 3;
+
 
 void setup() {
   size(800, 1000, P2D);
@@ -29,6 +41,9 @@ void setup() {
   redScore = 0;
   blueScore = 0;
   scoreFont = createFont("calibrib.ttf", 80);
+  
+  isRedTurn = true;
+  mode = 1;
 
   holes = new Hole[6];
   holes[0] = new Hole(new PVector(width/2 + 250, height/2 - 350), 50);
@@ -59,12 +74,12 @@ void setup() {
       if (blueCount < 7 && (redCount >= 7 || random(1) < 0.5)) {
         col = color(BLUE_COLOR);
         blueCount++;
-        isRed = false; 
+        isRed = false;
       }
       else {
         col = RED_COLOR;
         redCount++;
-        isRed = true; 
+        isRed = true;
       }
 
       balls.add(new Ball(new PVector(x, y), new PVector(), col, false, isRed));
@@ -72,85 +87,14 @@ void setup() {
   }
 }
 
-
 void draw() {
-  background(#ffffff);
-  drawTable();
-  
-  for (Hole h : holes) h.update();
-
-  // physics
-  for (int i = 0; i < balls.size(); i++) {
-    Ball ball = balls.get(i);
-    ball.update();
-    for (int j = i+1; j < balls.size(); j++) collision(ball, balls.get(j));
-    ball.display();
+  switch(mode) {
+    case START: break;
+    case GAME: GameDraw(); break;
+    case GAMEOVER: GameOverDraw(); break;
+    case PAUSED: PausedDraw(); break;
   }
-  
-  // check if any ball is in a hole
-  ArrayList<Integer> ballsToBeRemoved = new ArrayList<Integer>();
-  for(Hole hole : holes) {
-    for(int i = 0; i < balls.size(); i++) {
-      if(hole.isBallWithinHole(balls.get(i)) && !balls.get(i).isWhiteBall) {
-        ballsToBeRemoved.add(i);
-      }
-    }
-  }
-  
-  for(int i = 0; i < ballsToBeRemoved.size(); i++) {
-    Ball ballToRemove = balls.get(ballsToBeRemoved.get(i) - i);
-    if(ballToRemove.isRedBall) {
-      redScore++;
-    } else {
-      blueScore++;
-    }
-    balls.remove(ballToRemove);
-  }
-  
-  // cue stick logic
-  if (areBallsStill() && charging) {  // keep pulling back
-    if (charge < MAX_CHARGE) {
-      charge++;
-      pull = map(charge, 0, MAX_CHARGE, 0, MAX_PULL);
-    }
-  }
-
-  if (shooting) {  // forward shove
-    float t = (float)shootF / SHOOT_FRAMES;
-    pull = lerp(shootStartPull, 0, t);
-    shootF++;
-    if (shootF >= SHOOT_FRAMES) {
-      shooting = false;
-      pull     = 0;
-    }
-  }
-
-  // draw cue when balls are still OR during charge / shove
-  if (areBallsStill() || charging || shooting) drawCue();
-  
-  // score texts
-  textSize(80);
-  textAlign(CENTER);
-  textFont(scoreFont);
-  
-  fill(RED_COLOR);
-  text(redScore, width/2 -80, 80);
-  fill(BLUE_COLOR);
-  text(blueScore, width/2 +80, 80);
-  
 }
-
-void drawCue() {
-  PVector dir = PVector.fromAngle(cueAngle).normalize();
-  
-  PVector tip  = PVector.add(whiteBall.pos, PVector.mult(dir, -(whiteBall.r + pull)));
-  PVector butt = PVector.add(tip, PVector.mult(dir, -cueLength));
-
-  stroke(181, 130, 70);
-  strokeWeight(8);
-  line(tip.x, tip.y, butt.x, butt.y);
-}
-
 
 boolean areBallsStill() {
   for(Ball ball : balls) {
@@ -162,65 +106,36 @@ boolean areBallsStill() {
 }
 
 void mousePressed() {
-  if (areBallsStill() && !charging && !shooting) {
-    cueAngle = atan2(whiteBall.pos.y - mouseY, whiteBall.pos.x - mouseX);
+  switch(mode) {
+    case START: break;
+    case GAME: GameMousePressed(); break;
+    case GAMEOVER: break;
+    case PAUSED: break;
+  }
+}
+void mouseDragged() {
+  switch(mode) {
+    case START: break;
+    case GAME: GameMouseDragged(); break;
+    case GAMEOVER: break;
+    case PAUSED: break;
   }
 }
 
 void keyPressed() {
-  if (key == ' ' && areBallsStill() && !shooting) {
-    charging = true;
-    charge   = 0;
-    pull     = 0;
+  switch(mode) {
+    case START: break;
+    case GAME: GameKeyPressed(); break;
+    case GAMEOVER: break;
+    case PAUSED: PausedKeyPressed(); break;
   }
 }
 
 void keyReleased() {
-  if (key == ' ' && charging) {
-    PVector dir = PVector.fromAngle(cueAngle).normalize();
-    whiteBall.velocity = dir.mult(charge * 0.4f);
-
-    charging = false;
-    shooting = true;
-    shootF = 0;
-    shootStartPull = pull;
+  switch(mode) {
+    case START: break;
+    case GAME: GameSceneKeyReleased(); break;
+    case GAMEOVER: break;
+    case PAUSED: break;
   }
-}
-
-
-void drawTable() {
-  stroke(#000000);
-  strokeWeight(7);
-  fill(110, 57, 43);
-  rectMode(CENTER);
-  rect(width/2, height/2, 600, 800, 30);
-
-  strokeWeight(10);
-  fill(0,196,99);
-  rect(width/2, height/2, 500, 700, 30);
-}
-
-
-void collision(Ball a, Ball b) {
-  PVector delta = PVector.sub(b.pos, a.pos);
-  float dist = delta.mag();
-  float minDist = a.r + b.r;
-
-  if (dist >= minDist || dist == 0) return;
-
-  // overlap correction
-  float overlap = minDist - dist;
-  PVector n = delta.copy().div(dist);   // collision unit vector
-  a.pos.add(PVector.mult(n, -overlap * 0.5));
-  b.pos.add(PVector.mult(n,  overlap * 0.5));
-
-  PVector relVel = PVector.sub(b.velocity, a.velocity);
-  float vn = relVel.dot(n);          
-  if (vn > 0) return;       
-
-  float j = -(1 + 0.96) * vn / (1 / a.m + 1 / b.m);
-  PVector impulse = PVector.mult(n, j);
-
-  a.velocity.sub(PVector.mult(impulse, 1 / a.m));
-  b.velocity.add(PVector.mult(impulse, 1 / b.m));
 }

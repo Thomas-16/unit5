@@ -1,7 +1,7 @@
 final float BALL_R      = 20;    
 final float FRICTION    = 0.98;  // velocity decay
-final float BOUNCE_DAMP = 0.90;         // velocity kept after rail impact
-final float RESTITUTION = 0.96;         // ball–ball bounciness
+final float BOUNCE_DAMP = 0.90;  // velocity kept after rail impact
+final float RESTITUTION = 0.96;  // ball–ball bounciness
 
 class Ball {
   PVector pos, velocity;
