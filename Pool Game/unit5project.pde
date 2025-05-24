@@ -52,8 +52,8 @@ void draw() {
 
   world.step();
   world.draw();
-  //world.drawDebug();
-  //world.drawDebugData();
+  world.drawDebug();
+  world.drawDebugData();
 }
 
 
@@ -71,18 +71,15 @@ void handlePlayerMovement() {
   }
 
   float avgXVel = getBlobAvgVelocity().x;
-  println("avg x vel: " + avgXVel);
+  //println("avg x vel: " + avgXVel);
   float changeAmt = (targetVelocity - avgXVel) * 0.15;
-  println("change amt " + changeAmt);
+  //println("change amt " + changeAmt);
   for (int i = 0; i < blob.getVertexBodies().size(); i++) {
     ((FBody)blob.getVertexBodies().get(i)).adjustVelocity(changeAmt, 0);
   }
   
-  if(spaceKeyDown) {
-    for (Object vertexObj : blob.getVertexBodies()) {
-      FBody vertex = (FBody) vertexObj;
-      vertex.addForce(blob.getX(), blob.getY(), blob.getX() - vertex.getX(), blob.getY() - vertex.getY());
-    }
+  if (spaceKeyDown) {
+    applyPuffForce(200000); 
   }
   
 }
@@ -110,3 +107,37 @@ PVector getBlobAvgVelocity() {
   }
   return new PVector(xVelSum / blob.getVertexBodies().size(), yVelSum / blob.getVertexBodies().size());
 }
+
+void applyPuffForce(float strength) {
+  PVector c = getBlobCenter();       
+
+  for (Object vObj : blob.getVertexBodies()) {
+    FBody v = (FBody) vObj;
+
+    float dx = v.getX() - c.x;     
+    float dy = v.getY() - c.y;
+    float len = sqrt(dx*dx + dy*dy);
+    println("dx: " + dx + " dy: " + dy + " len: " + len);
+    if (len == 0) continue;
+
+    dx /= len;
+    dy /= len;
+
+    v.addForce(v.getX(), v.getY(), dx * strength, dy * strength);
+  }
+}
+
+PVector getBlobCenter() {
+  float sumX = 0;
+  float sumY = 0;
+  ArrayList verts = blob.getVertexBodies(); 
+
+  for (Object vObj : verts) {
+    FBody v = (FBody) vObj;
+    sumX += v.getX();
+    sumY += v.getY();
+  }
+  int n = verts.size();
+  return new PVector(sumX / n, sumY / n);
+}
+
