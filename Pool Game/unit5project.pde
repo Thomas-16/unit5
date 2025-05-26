@@ -14,10 +14,15 @@ FCircle circle;
 
 FBlob blob;
 
+PFont smileFont;
+PFont surprisedFont;
+
 // input
 boolean aKeyDown, dKeyDown, spaceKeyDown;
 
 float lastJumpTime = 0;
+boolean isFacingRight = true;
+boolean isGrounded;
 
 
 void setup() {
@@ -35,25 +40,33 @@ void setup() {
   b = new FBox(80, 80);
   b.setRotation(PI/5);
   b.setPosition(width/2, 100);
+  b.setFriction(1000);
   world.add(b);
 
   circle = new FCircle(80);
   circle.setPosition(width/2, height/2);
+  circle.setFriction(1000);
   world.add(circle);
 
   blob = new FBlob();
   blob.setAsCircle(200, 300, 80, 20);
   world.add(blob);
+  
+  smileFont = createFont("NotoSans-Regular", 64, true, "◕‿◕".toCharArray());
+  surprisedFont = createFont("NotoSans-Regular", 64, true, "˃⤙˂".toCharArray());
 
 }
 
 void draw() {
   background(240);
 
+  isGrounded = isGrounded();
   handlePlayerMovement();
 
   world.step();
   world.draw();
+  drawPlayerFace();
+  
   //world.drawDebug();
   //world.drawDebugData();
 }
@@ -64,9 +77,11 @@ void handlePlayerMovement() {
 
   if (aKeyDown && !dKeyDown) {
     targetVelocity = -330;
+    isFacingRight = false;
   }
   if (dKeyDown && !aKeyDown) {
     targetVelocity = 330;
+    isFacingRight = true;
   }
   if (!aKeyDown && !dKeyDown) {
     targetVelocity = 0;
@@ -81,7 +96,7 @@ void handlePlayerMovement() {
   }
   
   if (spaceKeyDown) {
-    if(millis() - lastJumpTime > 500 && isGrounded()) {
+    if(millis() - lastJumpTime > 500 && isGrounded) {
       for (int i = 0; i < blob.getVertexBodies().size(); i++) {
         ((FBody)blob.getVertexBodies().get(i)).adjustVelocity(0, -500);
         lastJumpTime = millis();
@@ -89,6 +104,20 @@ void handlePlayerMovement() {
     }
   }
   
+}
+
+void drawPlayerFace() {
+  pushMatrix();
+  translate(getBlobCenterPos().x + (isFacingRight ? 4 : -4), getBlobCenterPos().y + 6);
+  scale(isFacingRight ? -0.5 : 0.5, 0.5);
+  
+  textFont(isGrounded ? smileFont : surprisedFont);
+  textAlign(CENTER);
+  fill(0);
+  String faceString = isGrounded ? "◕‿◕" : "˃⤙˂";
+  text(faceString, 0, 0);
+  
+  popMatrix();
 }
 
 
@@ -103,17 +132,6 @@ void keyReleased() {
   if (key == ' ') spaceKeyDown = false;
 }
 
-PVector getBlobAvgVelocity() {
-  float xVelSum = 0;
-  float yVelSum = 0;
-
-  for (Object vertexObj : blob.getVertexBodies()) {
-    FBody vertex = (FBody) vertexObj;
-    xVelSum += vertex.getVelocityX();
-    yVelSum += vertex.getVelocityY();
-  }
-  return new PVector(xVelSum / blob.getVertexBodies().size(), yVelSum / blob.getVertexBodies().size());
-}
 
 boolean isGrounded() {
   float lowestY = -99999; 
@@ -124,7 +142,7 @@ boolean isGrounded() {
 
   for (Object vObj : blob.getVertexBodies()) {
     FBody v = (FBody) vObj;
-    if (abs(v.getY() - lowestY) > 4) continue; 
+    if (abs(v.getY() - lowestY) > 10) continue; 
 
     for (Object cObj : v.getContacts()) {
       FContact c = (FContact) cObj;
@@ -138,5 +156,25 @@ boolean isGrounded() {
   return false;  
 }
 
+PVector getBlobAvgVelocity() {
+  float xVelSum = 0;
+  float yVelSum = 0;
 
+  for (Object vertexObj : blob.getVertexBodies()) {
+    FBody vertex = (FBody) vertexObj;
+    xVelSum += vertex.getVelocityX();
+    yVelSum += vertex.getVelocityY();
+  }
+  return new PVector(xVelSum / blob.getVertexBodies().size(), yVelSum / blob.getVertexBodies().size());
+}
 
+PVector getBlobCenterPos() {
+  float sumX = 0, sumY = 0;
+  
+  for (Object vertexObj : blob.getVertexBodies()) {
+    FBody vertex = (FBody) vertexObj;
+    sumX += vertex.getX();
+    sumY += vertex.getY();
+  }
+  return new PVector(sumX / blob.getVertexBodies().size(), sumY / blob.getVertexBodies().size());
+}
