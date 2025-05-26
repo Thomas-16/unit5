@@ -1,141 +1,142 @@
-float cueAngle = -PI/2; 
-float cueLength = 180;
-float pull = 0;
-final float MAX_PULL = 60;
-final int SHOOT_FRAMES = 6; 
-final float MAX_CHARGE = 60;
-boolean charging = false;
-boolean shooting = false;
-int shootF = 0;   
-float charge = 0;  
-float shootStartPull;
+import fisica.*;
 
-Hole[] holes;
-ArrayList<Ball> balls;
-Ball whiteBall;
 
-// scores
-int redScore;
-int blueScore;
-PFont scoreFont;
+// https://web.archive.org/web/20140802193416/http://wiki.processing.org/w/Fisica_/_JBox2D_physics_engine#FCircle
+// https://mycours.es/fisica/
+// https://github.com/rikrd/fisica/blob/master/src/fisica/FBody.java
+// https://haphub.github.io/hAPI_Fisica/class_f_blob.html
 
-color BLUE_COLOR = color(0,102,255);
-color RED_COLOR = color(255,36,0);
-color redBackground = #ed634e;
-color blueBackground = #b0d7ff;
+FWorld world;
 
-boolean isRedTurn;
-boolean ballsStillLastFrame = true;
+// objects
+FBox b;
+FCircle circle;
 
-// mode framework
-int mode;
-final int START = 0;
-final int GAME = 1;
-final int GAMEOVER = 2;
-final int PAUSED = 3;
+FBlob blob;
+
+// input
+boolean aKeyDown, dKeyDown, spaceKeyDown;
+
+float lastJumpTime = 0;
 
 
 void setup() {
-  size(800, 1000, P2D);
-  
-  redScore = 0;
-  blueScore = 0;
-  scoreFont = createFont("calibrib.ttf", 80);
-  
-  isRedTurn = true;
-  mode = 1;
+  size(1200, 800, P2D);
 
-  holes = new Hole[6];
-  holes[0] = new Hole(new PVector(width/2 + 250, height/2 - 350), 50);
-  holes[1] = new Hole(new PVector(width/2 - 250, height/2 - 350), 50);
-  holes[2] = new Hole(new PVector(width/2 + 250, height/2), 50);
-  holes[3] = new Hole(new PVector(width/2 - 250, height/2), 50);
-  holes[4] = new Hole(new PVector(width/2 + 250, height/2 + 350), 50);
-  holes[5] = new Hole(new PVector(width/2 - 250, height/2 + 350), 50);
+  Fisica.init(this);
+  world = new FWorld();
 
-  // balls
-  balls = new ArrayList<Ball>();
+  world.setEdges();
+  world.setGrabbable(false);
+  world.setGravity(0, 800);
+  world.setEdgesFriction(0);
 
-  // white ball
-  whiteBall = new Ball(new PVector(width/2, height/2 + 250), new PVector(), color(255), true, false);
-  balls.add(whiteBall);
 
-  PVector rackOrigin = new PVector(width/2, height/2 - 100);
-  int rows = 5;
-  int blueCount = 0, redCount = 0;
+  b = new FBox(80, 80);
+  b.setRotation(PI/5);
+  b.setPosition(width/2, 100);
+  world.add(b);
 
-  for (int r = 0; r < rows; r++) {
-    for (int c = 0; c <= r; c++) {
-      float x = rackOrigin.x + (r*BALL_R) - (c*BALL_R*2);
-      float y = rackOrigin.y + r*BALL_R*sqrt(3);
-      color col;
-      boolean isRed;
+  circle = new FCircle(80);
+  circle.setPosition(width/2, height/2);
+  world.add(circle);
 
-      if (blueCount < 7 && (redCount >= 7 || random(1) < 0.5)) {
-        col = color(BLUE_COLOR);
-        blueCount++;
-        isRed = false;
-      }
-      else {
-        col = RED_COLOR;
-        redCount++;
-        isRed = true;
-      }
+  blob = new FBlob();
+  blob.setAsCircle(200, 300, 80, 20);
+  world.add(blob);
 
-      balls.add(new Ball(new PVector(x, y), new PVector(), col, false, isRed));
-    }
-  }
 }
 
 void draw() {
-  switch(mode) {
-    case START: break;
-    case GAME: GameDraw(); break;
-    case GAMEOVER: GameOverDraw(); break;
-    case PAUSED: PausedDraw(); break;
-  }
+  background(240);
+
+  handlePlayerMovement();
+
+  world.step();
+  world.draw();
+  //world.drawDebug();
+  //world.drawDebugData();
 }
 
-boolean areBallsStill() {
-  for(Ball ball : balls) {
-    if(ball.velocity.magSq() > 0.01) {
-      return false;
+
+void handlePlayerMovement() {
+  float targetVelocity = 0;
+
+  if (aKeyDown && !dKeyDown) {
+    targetVelocity = -330;
+  }
+  if (dKeyDown && !aKeyDown) {
+    targetVelocity = 330;
+  }
+  if (!aKeyDown && !dKeyDown) {
+    targetVelocity = 0;
+  }
+
+  float avgXVel = getBlobAvgVelocity().x;
+  //println("avg x vel: " + avgXVel);
+  float changeAmt = (targetVelocity - avgXVel) * 0.15;
+  //println("change amt " + changeAmt);
+  for (int i = 0; i < blob.getVertexBodies().size(); i++) {
+    ((FBody)blob.getVertexBodies().get(i)).adjustVelocity(changeAmt, 0);
+  }
+  
+  if (spaceKeyDown) {
+    if(millis() - lastJumpTime > 500 && isGrounded()) {
+      for (int i = 0; i < blob.getVertexBodies().size(); i++) {
+        ((FBody)blob.getVertexBodies().get(i)).adjustVelocity(0, -500);
+        lastJumpTime = millis();
+      }
     }
   }
-  return true;
+  
 }
 
-void mousePressed() {
-  switch(mode) {
-    case START: break;
-    case GAME: GameMousePressed(); break;
-    case GAMEOVER: break;
-    case PAUSED: break;
-  }
-}
-void mouseDragged() {
-  switch(mode) {
-    case START: break;
-    case GAME: GameMouseDragged(); break;
-    case GAMEOVER: break;
-    case PAUSED: break;
-  }
-}
 
 void keyPressed() {
-  switch(mode) {
-    case START: break;
-    case GAME: GameKeyPressed(); break;
-    case GAMEOVER: break;
-    case PAUSED: PausedKeyPressed(); break;
-  }
+  if (key == 'a') aKeyDown = true;
+  if (key == 'd') dKeyDown = true;
+  if (key == ' ') spaceKeyDown = true;
+}
+void keyReleased() {
+  if (key == 'a') aKeyDown = false;
+  if (key == 'd') dKeyDown = false;
+  if (key == ' ') spaceKeyDown = false;
 }
 
-void keyReleased() {
-  switch(mode) {
-    case START: break;
-    case GAME: GameSceneKeyReleased(); break;
-    case GAMEOVER: break;
-    case PAUSED: break;
+PVector getBlobAvgVelocity() {
+  float xVelSum = 0;
+  float yVelSum = 0;
+
+  for (Object vertexObj : blob.getVertexBodies()) {
+    FBody vertex = (FBody) vertexObj;
+    xVelSum += vertex.getVelocityX();
+    yVelSum += vertex.getVelocityY();
   }
+  return new PVector(xVelSum / blob.getVertexBodies().size(), yVelSum / blob.getVertexBodies().size());
 }
+
+boolean isGrounded() {
+  float lowestY = -99999; 
+  for (Object vObj : blob.getVertexBodies()) {
+    FBody v = (FBody) vObj;
+    if (v.getY() > lowestY) lowestY = v.getY();
+  }
+
+  for (Object vObj : blob.getVertexBodies()) {
+    FBody v = (FBody) vObj;
+    if (abs(v.getY() - lowestY) > 4) continue; 
+
+    for (Object cObj : v.getContacts()) {
+      FContact c = (FContact) cObj;
+      FBody other = (c.getBody1() == v) ? c.getBody2() : c.getBody1();
+
+      if (other != null && blob.getVertexBodies().contains(other)) continue;
+
+      return true;
+    }
+  }
+  return false;  
+}
+
+
+
