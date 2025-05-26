@@ -17,6 +17,9 @@ FBlob blob;
 // input
 boolean aKeyDown, dKeyDown, spaceKeyDown;
 
+float lastJumpTime = 0;
+
+
 void setup() {
   size(1200, 800, P2D);
 
@@ -42,7 +45,6 @@ void setup() {
   blob.setAsCircle(200, 300, 80, 20);
   world.add(blob);
 
-  blob.setFriction(0);
 }
 
 void draw() {
@@ -52,8 +54,8 @@ void draw() {
 
   world.step();
   world.draw();
-  world.drawDebug();
-  world.drawDebugData();
+  //world.drawDebug();
+  //world.drawDebugData();
 }
 
 
@@ -79,7 +81,12 @@ void handlePlayerMovement() {
   }
   
   if (spaceKeyDown) {
-    applyPuffForce(200000); 
+    if(millis() - lastJumpTime > 500 && isGrounded()) {
+      for (int i = 0; i < blob.getVertexBodies().size(); i++) {
+        ((FBody)blob.getVertexBodies().get(i)).adjustVelocity(0, -500);
+        lastJumpTime = millis();
+      }
+    }
   }
   
 }
@@ -108,36 +115,28 @@ PVector getBlobAvgVelocity() {
   return new PVector(xVelSum / blob.getVertexBodies().size(), yVelSum / blob.getVertexBodies().size());
 }
 
-void applyPuffForce(float strength) {
-  PVector c = getBlobCenter();       
+boolean isGrounded() {
+  float lowestY = -99999; 
+  for (Object vObj : blob.getVertexBodies()) {
+    FBody v = (FBody) vObj;
+    if (v.getY() > lowestY) lowestY = v.getY();
+  }
 
   for (Object vObj : blob.getVertexBodies()) {
     FBody v = (FBody) vObj;
+    if (abs(v.getY() - lowestY) > 4) continue; 
 
-    float dx = v.getX() - c.x;     
-    float dy = v.getY() - c.y;
-    float len = sqrt(dx*dx + dy*dy);
-    println("dx: " + dx + " dy: " + dy + " len: " + len);
-    if (len == 0) continue;
+    for (Object cObj : v.getContacts()) {
+      FContact c = (FContact) cObj;
+      FBody other = (c.getBody1() == v) ? c.getBody2() : c.getBody1();
 
-    dx /= len;
-    dy /= len;
+      if (other != null && blob.getVertexBodies().contains(other)) continue;
 
-    v.addForce(v.getX(), v.getY(), dx * strength, dy * strength);
+      return true;
+    }
   }
+  return false;  
 }
 
-PVector getBlobCenter() {
-  float sumX = 0;
-  float sumY = 0;
-  ArrayList verts = blob.getVertexBodies(); 
 
-  for (Object vObj : verts) {
-    FBody v = (FBody) vObj;
-    sumX += v.getX();
-    sumY += v.getY();
-  }
-  int n = verts.size();
-  return new PVector(sumX / n, sumY / n);
-}
 
