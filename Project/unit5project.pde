@@ -8,12 +8,12 @@ import fisica.*;
 
 // TODOS:
 // MOVING PLATFORMS (CLASS)
-// SPIKES (CLASS)
 // BUTTONS AND GATES
 // BOXES
 // MODE FRAMEWORK
 // FOLLOWING CAMERA
 // LEVEL SYSTEM
+// PARRALAX BACKGROUND
 
 
 // level colours
@@ -163,7 +163,8 @@ void handlePlayerMovement() {
 }
 void handleGravity() {
   int targetGravity = normalGravityStrength;
-  if(getBlobAvgVelocity().y > 0) {
+  // if is falling
+  if(isGravityFlipped ? getBlobAvgVelocity().y < 0 : getBlobAvgVelocity().y > 0) {
     targetGravity = fallingGravityStrength;
   } else {
     targetGravity = normalGravityStrength;
