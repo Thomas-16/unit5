@@ -7,6 +7,5 @@ class FSpike extends FBox {
     this.attachImage(image);
     this.setName("spike");
   }
-
   
 }
