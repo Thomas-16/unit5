@@ -7,6 +7,7 @@ class FStar extends FBox {
     super(width, height);
     this.images = images;
     
+    this.attachImage(images[0]);
     this.setName("star");
   }
   
