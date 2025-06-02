@@ -1,5 +1,7 @@
 
 class FPlayer extends FBlob {
+  private int speed = 300;
+  private int jumpStrength = 520;
   
   public FPlayer(float spawnPosX, float spawnPosY) {
     super();
@@ -12,18 +14,17 @@ class FPlayer extends FBlob {
   
   public void update(){
     handleMovement();
-    handleCollisions();
   }
   
   private void handleMovement() {
     float targetVelocity = 0;
   
     if (aKeyDown && !dKeyDown) {
-      targetVelocity = -330;
+      targetVelocity = -speed;
       isFacingRight = false;
     }
     if (dKeyDown && !aKeyDown) {
-      targetVelocity = 330;
+      targetVelocity = speed;
       isFacingRight = true;
     }
     if (!aKeyDown && !dKeyDown) {
@@ -41,22 +42,10 @@ class FPlayer extends FBlob {
     if (spaceKeyDown) {
       if(millis() - lastJumpTime > 80 && isGrounded) {
         for (int i = 0; i < this.getVertexBodies().size(); i++) {
-          ((FBody)this.getVertexBodies().get(i)).setVelocity(0, isGravityFlipped ? jumpStrength : -jumpStrength);
+          FBody vertexBody = (FBody)this.getVertexBodies().get(i);
+          vertexBody.setVelocity(vertexBody.getVelocityX(), isGravityFlipped ? jumpStrength : -jumpStrength);
           lastJumpTime = millis();
         }
-      }
-    }
-  }
-  void handleCollisions() {
-    ArrayList<FContact> contacts = this.getPlayerContacts();
-    for(FContact contact : contacts) {
-      if(contact.contains("spike")) {
-        setupScene();
-        break;
-      }
-      else if(contact.contains("star")) {
-        setupScene();
-        break;
       }
     }
   }
@@ -104,7 +93,7 @@ class FPlayer extends FBlob {
     
       for (Object vObj : player.getVertexBodies()) {
         FBody v = (FBody) vObj;
-        if (abs(v.getY() - lowestY) > 12) continue; 
+        if (abs(v.getY() - lowestY) > 10) continue; 
     
         for (Object cObj : v.getContacts()) {
           FContact c = (FContact) cObj;
@@ -127,7 +116,7 @@ class FPlayer extends FBlob {
     
       for (Object vObj : player.getVertexBodies()) {
         FBody v = (FBody) vObj;
-        if (abs(v.getY() - highestY) > 12) continue; 
+        if (abs(v.getY() - highestY) > 10) continue; 
     
         for (Object cObj : v.getContacts()) {
           FContact c = (FContact) cObj;
