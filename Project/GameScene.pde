@@ -252,7 +252,7 @@ void drawUI() {
   textFont(font);
   textSize(80);
   textAlign(LEFT);
-  text("Level " + (level+1) +"   Flips left: " + flipsLeft + "  Deaths: " + deaths, 60, 100);
+  text("Level " + (level+1) +"  Flips left: " + flipsLeft + "  Deaths: " + deaths, 60, 100);
 }
 
 void loadLevel(int level) {
@@ -308,6 +308,21 @@ void drawPlayerFace() {
   popMatrix();
 }
 
+void gameSceneKeyPressed() {
+  if (key == 'a') aKeyDown = true;
+  if (key == 'd') dKeyDown = true;
+  if (key == ' ') spaceKeyDown = true;
+  
+  if(key == 'g' && flipsLeft > 0) {
+    isGravityFlipped = !isGravityFlipped;
+    flipsLeft--;
+  }
+}
+void gameSceneKeyReleased() {
+  if (key == 'a') aKeyDown = false;
+  if (key == 'd') dKeyDown = false;
+  if (key == ' ') spaceKeyDown = false;
+}
 
 PImage scaleImage(PImage src, int w, int h) {
   PImage out = createImage(w, h, ARGB);
@@ -323,20 +338,4 @@ PImage scaleImage(PImage src, int w, int h) {
   }
   out.updatePixels();
   return out;
-}
-
-void gameSceneKeyPressed() {
-  if (key == 'a') aKeyDown = true;
-  if (key == 'd') dKeyDown = true;
-  if (key == ' ') spaceKeyDown = true;
-  
-  if(key == 'g' && flipsLeft > 0) {
-    isGravityFlipped = !isGravityFlipped;
-    flipsLeft--;
-  }
-}
-void gameSceneKeyReleased() {
-  if (key == 'a') aKeyDown = false;
-  if (key == 'd') dKeyDown = false;
-  if (key == ' ') spaceKeyDown = false;
 }

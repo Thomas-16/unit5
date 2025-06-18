@@ -1,4 +1,3 @@
-
 class FPlayer extends FBlob {
   private int speed = 300;
   private int jumpStrength = 520;
